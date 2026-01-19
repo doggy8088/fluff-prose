@@ -16,13 +16,18 @@ const commentDiv = document.getElementById("master-comment") as HTMLDivElement |
 const counterDiv = document.getElementById("counter") as HTMLDivElement | null;
 const particlesContainer = document.getElementById("particles") as HTMLDivElement | null;
 const scene = document.getElementById("scene");
-const nextButton = document.getElementById("next-button");
 
 if (!card || !contentDiv || !commentDiv || !counterDiv || !particlesContainer) {
     throw new Error("Required DOM elements not found");
 }
 
-let count = 0;
+const counterStorageKey = "inspirationCount";
+const storedCount = window.localStorage.getItem(counterStorageKey);
+let count = storedCount ? Number(storedCount) : 0;
+if (!Number.isFinite(count)) {
+    count = 0;
+}
+counterDiv.innerText = String(count);
 let isFlipped = false;
 
 function createParticles() {
@@ -58,6 +63,7 @@ function flipCard() {
 
         count += 1;
         counterDiv.innerText = String(count);
+        window.localStorage.setItem(counterStorageKey, String(count));
 
         createBurstEffect();
     } else {
@@ -66,17 +72,6 @@ function flipCard() {
     }
 }
 
-function nextNonsense() {
-    if (isFlipped) {
-        card.classList.remove("is-flipped");
-        isFlipped = false;
-        setTimeout(() => {
-            flipCard();
-        }, 400);
-    } else {
-        flipCard();
-    }
-}
 
 function createBurstEffect() {
     for (let i = 0; i < 10; i += 1) {
@@ -104,5 +99,4 @@ function createBurstEffect() {
 }
 
 scene?.addEventListener("click", flipCard);
-nextButton?.addEventListener("click", nextNonsense);
 window.addEventListener("load", createParticles);
