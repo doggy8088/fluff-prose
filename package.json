@@ -4,6 +4,6 @@
   "type": "module",
   "scripts": {
     "build": "bun run scripts/build.ts",
-    "start": "bun run scripts/dev.ts"
+    "start": "bun run scripts/build.ts && bun run scripts/dev.ts"
   }
 }

@@ -1,51 +1,38 @@
 import path from "node:path";
 
 const rootDir = path.resolve(import.meta.dir, "..");
+const distDir = path.join(rootDir, "dist");
+const port = Number(process.env.PORT ?? 3124);
 
-const initial = Bun.spawn({
-    cmd: ["bun", "run", "scripts/build.ts"],
-    cwd: rootDir,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit"
-});
+function toFilePath(urlPath: string) {
+    const normalized = decodeURIComponent(urlPath);
+    const suffix = normalized === "/" ? "/index.html" : normalized;
+    const resolved = path.resolve(distDir, `.${suffix}`);
 
-const initialExit = await initial.exited;
-if (initialExit !== 0) {
-    process.exit(initialExit);
+    if (!resolved.startsWith(distDir)) {
+        return null;
+    }
+
+    return resolved;
 }
 
-const build = Bun.spawn({
-    cmd: ["bun", "--watch", "scripts/build.ts"],
-    cwd: rootDir,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit"
+const server = Bun.serve({
+    port,
+    async fetch(request) {
+        const url = new URL(request.url);
+        const filePath = toFilePath(url.pathname);
+
+        if (!filePath) {
+            return new Response("Not found", { status: 404 });
+        }
+
+        const file = Bun.file(filePath);
+        if (await file.exists()) {
+            return new Response(file);
+        }
+
+        return new Response("Not found", { status: 404 });
+    }
 });
 
-const serve = Bun.spawn({
-    cmd: ["bunx", "--bun", "live-server", "dist", "--port=4173", "--no-browser"],
-    cwd: rootDir,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit"
-});
-
-const shutdown = () => {
-    build.kill();
-    serve.kill();
-};
-
-process.on("SIGINT", () => {
-    shutdown();
-    process.exit(0);
-});
-
-process.on("SIGTERM", () => {
-    shutdown();
-    process.exit(0);
-});
-
-const exitCode = await Promise.race([build.exited, serve.exited]);
-shutdown();
-process.exit(exitCode);
+console.log(`Dev server running at http://localhost:${server.port}`);
